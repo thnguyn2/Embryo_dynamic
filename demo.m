@@ -102,14 +102,16 @@ colorarr = 'rgbycm';
 nframes_per_checkpoint = 15; %Number of frame between2 2 checkpoint
 totaltimestepnum = 300;
 for featidx = 1:length(feat_type_arr(:))
-    feat_arr = zeros(nfovs,totaltimestepnum);
+    feat_arr = zeros(nfovs,1+totaltimestepnum); %The first column is for the FOV index
+    feat_file_name = strcat(pwd,'/results/',feat_type_arr{featidx},'.xlsx');
     figure(1);hold off;
     for fovidx = 1:nfovs
-       curfolder_name = strcat(datapath,fov_folder_prefix,num2str(fov_arr(fovidx)));
+        feat_arr(fovidx,1)=fov_arr(fovidx);
+        curfolder_name = strcat(datapath,fov_folder_prefix,num2str(fov_arr(fovidx)));
         fov_roi_name = strcat(fovpath,'fov_',num2str(fov_arr(fovidx)),'.txt');
         roi_coord = csvread(fov_roi_name);
         ntime = size(roi_coord,1);
-        firsttimesteptowrite = 1;
+        firsttimesteptowrite = 2;
         for timeidx = 1:(ntime)
             videofilename = strcat(curfolder_name,'/',num2str(fov_arr(fovidx)),'_',num2str(time_arr(timeidx)),'_sin_timelapse.avi');
             if (~exist(videofilename,'file'))
@@ -125,13 +127,14 @@ for featidx = 1:length(feat_type_arr(:))
               res = feat_comp(datablock,feat_type_arr(featidx));
               lasttimesteptowrite = firsttimesteptowrite + length(res)-1;
               feat_arr(fovidx,firsttimesteptowrite:lasttimesteptowrite) = res';
-              firsttimesteptowrite = lasttimesteptowrite+1;
-    
+              firsttimesteptowrite = lasttimesteptowrite+1;    
             end
             disp(['Working on FOV: #' num2str(fovidx) ' at time: ' num2str(timeidx)]);
         end
         %Plot the features
-        plot(feat_arr(fovidx,:),strcat('-',colorarr(mod(fovidx,length(colorarr))+1)));
+        plot(feat_arr(fovidx,2:end),strcat('-',colorarr(mod(fovidx,length(colorarr))+1)));
         hold on;
+        csvwrite(feat_file_name,feat_arr);
+        
     end   
 end

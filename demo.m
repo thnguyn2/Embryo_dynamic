@@ -22,3 +22,30 @@
 clc;
 clear all;
 close all;
+fov_arr = [9, 12];
+fov_roi_reupdate = [9, 12];
+datapath = '/media/thnguyn2/Elements/QDIC_Embryos/fancymovies/'
+fovpath = strcat(pwd,'fovs/');
+utilpath = strcat(pwd,'utils/');
+nfovs = length(fov_arr(:));
+fov_folder_prefix = 'jpegdic_';
+time_arr = [15 25 43 61 73 91 111]; %Different point in which the time is specified
+
+%%---ROI specifying----
+ntime = length(time_arr(:));
+for fovidx = 1:nfovs
+    curfolder_name = strcat(datapath,fov_folder_prefix,num2str(fov_arr(fovidx)));
+    fov_roi_name = strcat(fovpath,'fov_',num2str(fov_arr(fovidx)),'.xlsx');
+    %Check for the existence of the excel file or it needs to be reupdated
+    if ((~exist(fov_roi_name,'file'))||(ismember(fov_arr(fovidx),fov_roi_reupdate)))
+        if (~exist(curfolder_name,'dir'))
+            error(strcat('Folder: ',curfolder_name,' does not exist. Please double check!!!'))
+        else
+            for timeidx=1:ntime
+                
+            end
+        end
+    end
+    
+    
+end

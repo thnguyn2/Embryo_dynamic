@@ -100,7 +100,7 @@ end
 feat_type_arr = {'spatial_std'};
 colorarr = 'rgbycm';
 nframes_per_checkpoint = 15; %Number of frame between2 2 checkpoint
-totaltimestepnum = 300;
+totaltimestepnum = 271;
 for featidx = 1:length(feat_type_arr(:))
     feat_arr = zeros(nfovs,1+totaltimestepnum); %The first column is for the FOV index
     feat_file_name = strcat(pwd,'/results/',feat_type_arr{featidx},'.xlsx');
@@ -113,7 +113,7 @@ for featidx = 1:length(feat_type_arr(:))
         ntime = size(roi_coord,1);
         firsttimesteptowrite = 2;
         for timeidx = 1:(ntime)
-            videofilename = strcat(curfolder_name,'/',num2str(fov_arr(fovidx)),'_',num2str(time_arr(timeidx)),'_sin_timelapse.avi');
+            videofilename = strcat(curfolder_name,'/',num2str(fov_arr(fovidx)),'_',num2str(time_arr(timeidx)),'_qdic_timelapse.avi');
             if (~exist(videofilename,'file'))
                 error(strcat('Video: ',videofilename,' does not exist'));
             else

@@ -13,7 +13,7 @@
 % Excel file for each core. The structure of this file is as follow
 % % -The results.xlxs file will be updated/created. This excel file contains all the
 % measurement results as well as plotting. Row [100*featureIdx + fovIdx + 10]
-% contains all the measurements for the for the fovSpecifed by fovIdx and
+% contains all the measurements for the for the fovSpecifed by fovIdx an
 % feature identified by featureIdx. Row: 1-10 of this file contains the
 % name of the feature.
 % -The utils folder contains all the functions that are used to compute the
@@ -26,7 +26,8 @@ fov_arr = [5, 9, 12, 19, 20, 23, 24, 25, 32, 33, 34, 55];
 fov_roi_reupdate = [];
 datapath = '/media/thnguyn2/Elements/QDIC_Embryos/fancymovies/'
 fovpath = strcat(pwd,'/fovs/');
-utilpath = strcat(pwd,'utils/');
+utilpath = strcat(pwd,'/utils/');
+addpath(utilpath);
 nfovs = length(fov_arr(:));
 fov_folder_prefix = 'jpegdic_';
 time_arr = [15 25 43 61 73 91 111 146 148 158 180 229 271]; %Different point in which the time is specified
@@ -90,11 +91,47 @@ for fovidx = 1:nfovs
             %Save into the excel file
             csvwrite(fov_roi_name,data_arr);
             disp('Data saved: ');
-            data_arr
-            disp(['Done writting for FOV: ', num2str(fov_arr(fovidx))]);
-            
+            disp(['Done writting for FOV: ', num2str(fov_arr(fovidx))]);            
         end
     end
+end
+
+%Compute the dynamics of different FOVs
+feat_type_arr = {'spatial_std'};
+colorarr = 'rgbycm';
+nframes_per_checkpoint = 15; %Number of frame between2 2 checkpoint
+totaltimestepnum = 300;
+for featidx = 1:length(feat_type_arr(:))
+    feat_arr = zeros(nfovs,totaltimestepnum);
+    figure(1);hold off;
+    for fovidx = 1:nfovs
+       curfolder_name = strcat(datapath,fov_folder_prefix,num2str(fov_arr(fovidx)));
+        fov_roi_name = strcat(fovpath,'fov_',num2str(fov_arr(fovidx)),'.txt');
+        roi_coord = csvread(fov_roi_name);
+        ntime = size(roi_coord,1);
+        firsttimesteptowrite = 1;
+        for timeidx = 1:(ntime)
+            videofilename = strcat(curfolder_name,'/',num2str(fov_arr(fovidx)),'_',num2str(time_arr(timeidx)),'_sin_timelapse.avi');
+            if (~exist(videofilename,'file'))
+                error(strcat('Video: ',videofilename,' does not exist'));
+            else
+              v = VideoReader(videofilename);
+              params.r1 = roi_coord(timeidx,2);
+              params.r2 = roi_coord(timeidx,3);
+              params.c1 = roi_coord(timeidx,4);
+              params.c2 = roi_coord(timeidx,5);
+              frames = squeeze(read(v)); %Read the entire video
+              datablock = frames(params.r1:params.r2,params.c1:params.c2,:);
+              res = feat_comp(datablock,feat_type_arr(featidx));
+              lasttimesteptowrite = firsttimesteptowrite + length(res)-1;
+              feat_arr(fovidx,firsttimesteptowrite:lasttimesteptowrite) = res';
+              firsttimesteptowrite = lasttimesteptowrite+1;
     
-    
+            end
+            disp(['Working on FOV: #' num2str(fovidx) ' at time: ' num2str(timeidx)]);
+        end
+        %Plot the features
+        plot(feat_arr(fovidx,:),strcat('-',colorarr(mod(fovidx,length(colorarr))+1)));
+        hold on;
+    end   
 end

@@ -98,15 +98,17 @@ end
 
 %Compute the dynamics of different FOVs
 feat_type_arr = {'spatial_std'};
-colorarr = 'rgbycm';
+colorarr = 'rgbycmk';
 nframes_per_checkpoint = 15; %Number of frame between2 2 checkpoint
 totaltimestepnum = 271;
+
+fov_list = cell(0,1);
 for featidx = 1:length(feat_type_arr(:))
     feat_arr = zeros(nfovs,1+totaltimestepnum); %The first column is for the FOV index
     feat_file_name = strcat(pwd,'/results/',feat_type_arr{featidx},'.xlsx');
     figure(1);hold off;
-    %for fovidx = 1:nfovs
-    for fovidx = 9:9
+    for fovidx = 1:8
+    %for fovidx = 9:9
         feat_arr(fovidx,1)=fov_arr(fovidx);
         curfolder_name = strcat(datapath,fov_folder_prefix,num2str(fov_arr(fovidx)));
         fov_roi_name = strcat(fovpath,'fov_',num2str(fov_arr(fovidx)),'.txt');
@@ -125,26 +127,30 @@ for featidx = 1:length(feat_type_arr(:))
               params.c2 = roi_coord(timeidx,5);
               frames = squeeze(read(v)); %Read the entire video
               datablock = frames(params.r1:params.r2,params.c1:params.c2,:);
-              figure(timeidx);
-              imagesc(frames(:,:,1));%Draw the first frame
-              colormap gray;
-              hold on;
-              rectangle('Position',[params.c1, params.r1, params.c2-params.c1+1, params.r2-params.r1+1],'EdgeColor', 'r',...
-              'LineWidth', 3,...
-              'LineStyle','-');
-              hold off;
+%               figure(2);
+%               imagesc(frames(:,:,1));%Draw the first frame
+%               colormap gray;
+%               hold on;
+%               rectangle('Position',[params.c1, params.r1, params.c2-params.c1+1, params.r2-params.r1+1],'EdgeColor', 'r',...
+%               'LineWidth', 3,...
+%               'LineStyle','-');
+%               hold off;
               res = feat_comp(datablock,feat_type_arr(featidx));
               lasttimesteptowrite = firsttimesteptowrite + length(res)-1;
               feat_arr(fovidx,firsttimesteptowrite:lasttimesteptowrite) = res';
               firsttimesteptowrite = lasttimesteptowrite+1;    
             end
             disp(['Working on FOV: #' num2str(fov_arr(fovidx)) ' at time: ' num2str(timeidx)]);
+          
         end
+        fov_list{end+1,1}=strcat('FOV #', num2str(fov_arr(fovidx)));
         %Plot the features
-        figure(ntime+1);
-        plot(feat_arr(fovidx,2:end),strcat('-',colorarr(mod(fovidx,length(colorarr))+2)));
-        xlabel('Frame indices')
-        ylabel('Phase difference standard deviation')
+        figure(1);
+        plot(feat_arr(fovidx,2:end),strcat('-',colorarr(mod(fovidx,length(colorarr))+1)));
+        xlabel('Frame indices');
+        ylabel('Phase difference standard deviation');
+        legend(fov_list);
+        
         hold on;
         csvwrite(feat_file_name,feat_arr);
         

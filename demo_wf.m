@@ -8,8 +8,8 @@ utilpath = strcat(pwd,'/utils/');
 addpath(utilpath);
 fov_arr =[3,12,19];
 nfovs = length(fov_arr);
-min_out=0;
-max_out=50;
+min_out=18;
+max_out=40;
 for fovidx = 1:nfovs
     curfile_name = strcat(datafolder,num2str(fov_arr(fovidx)),'_int.avi');
     curoutfile_name = strcat(datafolder,num2str(fov_arr(fovidx)),'_int_out.avi');
@@ -22,8 +22,8 @@ for fovidx = 1:nfovs
         Nr = size(frames,1);
         Nc = size(frames,2);
         Nt = size(frames,3);
-        ss = 3; %Steady stead
-        ord = 100;
+        ss = 1; %Steady stead
+        ord = 50;
         WF = zeros(Nt);
         WF(ss:end,ss:end)=wallfilter(Nt-ss+1,ord);
         disp('Median filtering to get rid of the spatial noise');
@@ -36,17 +36,23 @@ for fovidx = 1:nfovs
         outdata = indata*WF;%Wall filtering
         outframes = (abs(reshape(outdata,Nr,Nc,Nt)));
         outframes = 20*log10(outframes);
-        filt_len=4;
-        for frameidx = 1:Nt
-            outframes(:,:,frameidx) = conv2(outframes(:,:,frameidx),ones(filt_len)/filt_len^2,'same');
-            outframes(:,:,frameidx) = cast((outframes(:,:,frameidx)-min_out)*255.0/(max_out-min_out),'uint8');%Map the output to [min_out, max_out] range
-            
-        end
+        filt_len=8;
         outVideoObj = VideoWriter(curoutfile_name);
         open(outVideoObj);
         disp('Writing the Video...')
         for frameidx = 1:Nt
-            writeVideo(outVideoObj,cast(outframes(:,:,frameidx),'uint8'));
+            outframes(:,:,frameidx) = conv2(outframes(:,:,frameidx),ones(filt_len)/filt_len^2,'same');
+            outframes(:,:,frameidx) = (outframes(:,:,frameidx)-min_out)/(max_out-min_out);%Map the output to [min_out, max_out] range
+            
+            %Create a 3 color image
+            tempim = zeros(Nr,Nc,3);
+            tempim(:,:,1) = frames(:,:,frameidx);
+            tempim(:,:,2) = frames(:,:,frameidx);
+            tempim(:,:,3) = frames(:,:,frameidx);
+            outframes3c = grs2rgb(cast(outframes(:,:,frameidx)*255,'uint8'))*255;
+            writedata = repmat((squeeze(outframes(:,:,frameidx))>=0),[1 1 3]).*outframes3c +...
+                repmat((squeeze(outframes(:,:,frameidx))<0),[1 1 3]).*tempim;
+            writeVideo(outVideoObj,cast(writedata,'uint8'));
         end
         disp(['Done writing ' curoutfile_name '...']);
         close(outVideoObj);

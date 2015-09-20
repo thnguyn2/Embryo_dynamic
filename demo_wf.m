@@ -7,9 +7,9 @@ close all;
 datafolder = '/raid5/Mikhail/QDIC_Embryos/fancymovies/dynamics/';
 utilpath = strcat(pwd,'/utils/');
 addpath(utilpath);
-fov_arr =[3,12,19];
+fov_arr =1:33;
 nfovs = length(fov_arr);
-min_out=-30;
+min_out=-24;
 max_out=0;
 for fovidx = 1:nfovs
     curfile_name = strcat(datafolder,'MOV_',num2str(fov_arr(fovidx)),'_0_1_0_QDIC.tif');
@@ -47,7 +47,7 @@ for fovidx = 1:nfovs
         outVideoObj = VideoWriter(curoutfile_name);
         open(outVideoObj);
         disp('Writing the Video...')
-        for frameidx = 10:Nt
+        for frameidx = 1:Nt
             disp(['Final processing frame: ' num2str(frameidx)]);
             outframes(:,:,frameidx) = ((outframes(:,:,frameidx)-min_out)/(max_out-min_out));%Map the output to [min_out, max_out] range
             mask = cast((outframes(:,:,frameidx)>=0),'single');

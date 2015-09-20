@@ -3,27 +3,34 @@ clc;
 clear all;
 close all;
 %datafolder = '/media/thnguyn2/Elements/QDIC_Embryos/fancymovies/forPPT/dynamics/'
-datafolder = '/run/media/daniel/Elements/QDIC_Embryos/fancymovies/forPPT/dynamics/';
+%datafolder = '/run/media/daniel/Elements/QDIC_Embryos/fancymovies/forPPT/dynamics';
+datafolder = '/raid5/Mikhail/QDIC_Embryos/fancymovies/dynamics/';
 utilpath = strcat(pwd,'/utils/');
 addpath(utilpath);
 fov_arr =[3,12,19];
 nfovs = length(fov_arr);
-min_out=18;
-max_out=40;
+min_out=-30;
+max_out=0;
 for fovidx = 1:nfovs
-    curfile_name = strcat(datafolder,num2str(fov_arr(fovidx)),'_int.avi');
-    curoutfile_name = strcat(datafolder,num2str(fov_arr(fovidx)),'_int_out.avi');
+    curfile_name = strcat(datafolder,'MOV_',num2str(fov_arr(fovidx)),'_0_1_0_QDIC.tif');
+    curoutfile_name = strcat(datafolder,'MOV_',num2str(fov_arr(fovidx)),'_0_1_0_QDIC_out.avi');
     if (~exist(curfile_name,'file'))
         error(strcat('File: ',curfile_name,' does not exist. Please double check!!!'))
     else
-        v=VideoReader(curfile_name);
-        frames = cast(squeeze(read(v)),'single');%Read all the frames
-        frames = squeeze(frames(1:1:end,1:1:end,1,:));
-        Nr = size(frames,1);
-        Nc = size(frames,2);
-        Nt = size(frames,3);
-        ss = 1; %Steady stead
-        ord = 50;
+        finfo = imfinfo(curfile_name);
+        Nt = length(finfo); %Get the number of frames
+        frame1 = imread(curfile_name);
+        Nr = size(frame1,1);
+        Nc = size(frame1,2);
+        frames = zeros(Nr,Nc,Nt);
+        for frameidx = 1:Nt
+            disp(['Reading frame: ' num2str(frameidx)]);
+            frames(:,:,frameidx)=imread(curfile_name,frameidx);
+        end
+        frames = cast(frames,'single');%Read all the frames
+        frames = squeeze(frames(1:1:end,1:1:end,:)); %Downsampling
+        ss = 3; %Steady stead
+        ord = ceil((Nt-2)/8); % order of filter;
         WF = zeros(Nt);
         WF(ss:end,ss:end)=wallfilter(Nt-ss+1,ord);
         disp('Median filtering to get rid of the spatial noise');
@@ -34,24 +41,27 @@ for fovidx = 1:nfovs
         disp('Wall filtering the result')
         indata = reshape(frames,Nr*Nc,Nt);
         outdata = indata*WF;%Wall filtering
-        outframes = (abs(reshape(outdata,Nr,Nc,Nt)));
-        outframes = 20*log10(outframes);
+        outdata = reshape(outdata,size(frames));
+        outframes = 20*log10(abs(outdata));
         filt_len=8;
         outVideoObj = VideoWriter(curoutfile_name);
         open(outVideoObj);
         disp('Writing the Video...')
-        for frameidx = 1:Nt
-            outframes(:,:,frameidx) = conv2(outframes(:,:,frameidx),ones(filt_len)/filt_len^2,'same');
-            outframes(:,:,frameidx) = (outframes(:,:,frameidx)-min_out)/(max_out-min_out);%Map the output to [min_out, max_out] range
-            
+        for frameidx = 10:Nt
+            disp(['Final processing frame: ' num2str(frameidx)]);
+            outframes(:,:,frameidx) = ((outframes(:,:,frameidx)-min_out)/(max_out-min_out));%Map the output to [min_out, max_out] range
+            mask = cast((outframes(:,:,frameidx)>=0),'single');
+            invmask = 1.0-mask;
+            outframes1= outframes(:,:,frameidx).*mask;
+            outframes(:,:,frameidx) = conv2(outframes1,ones(filt_len)/filt_len^2,'same');
+           
             %Create a 3 color image
             tempim = zeros(Nr,Nc,3);
-            tempim(:,:,1) = frames(:,:,frameidx);
-            tempim(:,:,2) = frames(:,:,frameidx);
-            tempim(:,:,3) = frames(:,:,frameidx);
-            outframes3c = grs2rgb(cast(outframes(:,:,frameidx)*255,'uint8'))*255;
-            writedata = repmat((squeeze(outframes(:,:,frameidx))>=0),[1 1 3]).*outframes3c +...
-                repmat((squeeze(outframes(:,:,frameidx))<0),[1 1 3]).*tempim;
+            tempim(:,:,1) = (frames(:,:,frameidx)+1.0)*128;
+            tempim(:,:,2) = (frames(:,:,frameidx)+1.0)*128;
+            tempim(:,:,3) = (frames(:,:,frameidx)+1.0)*128;
+            outframes3c = grs2rgb(cast(outframes(:,:,frameidx)*255,'uint8'))*255.0;
+            writedata =     cast(repmat(invmask,[1 1 3]),'double').*tempim+repmat(mask,[1 1 3]).*outframes3c;
             writeVideo(outVideoObj,cast(writedata,'uint8'));
         end
         disp(['Done writing ' curoutfile_name '...']);
